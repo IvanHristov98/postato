@@ -43,6 +43,10 @@ func (k *kMeansSuperCluster) Adjust(iterCount uint) error {
 
 			k.minClusterDist = dist
 			k.copyPoints(clonedPoints)
+
+			for _, points := range k.points {
+				points.setMembershipDegree(centroids)
+			}
 		}
 	}
 
@@ -174,10 +178,6 @@ func (k *kMeansSuperCluster) clusterCenter(points []*FuzzyPoint, clusterIdx int)
 	}
 
 	overallCoords := make([]float64, dimCount)
-	// TODO: Possibly remove since they should be initialized with a size of zero.
-	for i := 0; i < dimCount; i++ {
-		overallCoords[i] = 0
-	}
 
 	pointsCount := 0
 
@@ -255,8 +255,6 @@ func bestFitCluster(centroids []*FuzzyPoint, point *FuzzyPoint) (int, float64) {
 			minDist = dist
 			bestFitClusterIdx = clusterIdx
 		}
-
-		// TODO: Set membership degree logic.
 	}
 
 	return bestFitClusterIdx, minDist

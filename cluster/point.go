@@ -47,6 +47,29 @@ func (f *FuzzyPoint) DimCount() int {
 	return len(f.Coords)
 }
 
+func (f *FuzzyPoint) MembershipDegree(clusterIdx int) float64 {
+	return f.membershipDegrees[clusterIdx]
+}
+
+func (f *FuzzyPoint) setMembershipDegree(centroids []*FuzzyPoint) {
+	totalMembership := 0.0
+
+	for _, centroid := range centroids {
+		dist := f.Dist(centroid)
+		if dist == 0 {
+			f.membershipDegrees[centroid.BestFitClusterIdx] = 1
+		} else {
+			f.membershipDegrees[centroid.BestFitClusterIdx] = 1 / (dist * dist)
+		}
+
+		totalMembership += f.membershipDegrees[centroid.BestFitClusterIdx]
+	}
+
+	for _, centroid := range centroids {
+		f.membershipDegrees[centroid.BestFitClusterIdx] /= totalMembership
+	}
+}
+
 func (f *FuzzyPoint) hasBestFitCluster() bool {
 	return f.BestFitClusterIdx != NoClusterFit
 }

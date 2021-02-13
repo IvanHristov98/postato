@@ -20,6 +20,6 @@ func main() {
 	c.Adjust(10)
 
 	for _, point := range points {
-		fmt.Print(point.BestFitClusterIdx)
+		fmt.Println(point.BestFitClusterIdx, point.MembershipDegree(0), point.MembershipDegree(1))
 	}
 }
