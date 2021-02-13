@@ -7,11 +7,19 @@ import (
 )
 
 func main() {
-	p := clr.NewFuzzyPoint([]float64{2.0})
-	clusterCnt := 1
+	points := []*clr.FuzzyPoint{
+		clr.NewFuzzyPoint([]float64{2.0}),
+		clr.NewFuzzyPoint([]float64{2.0}),
+		clr.NewFuzzyPoint([]float64{5.0}),
+		clr.NewFuzzyPoint([]float64{4.0}),
+		clr.NewFuzzyPoint([]float64{2.0}),
+	}
+	clusterCnt := 2
 
-	c := clr.NewKMeansSuperCluster([]*clr.FuzzyPoint{p}, clusterCnt)
+	c := clr.NewKMeansSuperCluster(points, clusterCnt)
 	c.Adjust(10)
 
-	fmt.Print(p.BestFitClusterIdx)
+	for _, point := range points {
+		fmt.Print(point.BestFitClusterIdx)
+	}
 }

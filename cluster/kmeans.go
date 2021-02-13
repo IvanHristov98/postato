@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 )
@@ -27,10 +28,22 @@ func NewKMeansSuperCluster(points []*FuzzyPoint, clusterCount int) FuzzySuperClu
 
 func (k *kMeansSuperCluster) Adjust(iterCount uint) error {
 	for i := 0; i < int(iterCount); i++ {
+		// Cloning points to keep original ones intact
 		clonedPoints := k.clonePoints()
-		k.clusterize(clonedPoints)
+		centroids, err := k.clusterize(clonedPoints)
 
-		// TODO: Intercluster dist metric and improve points.
+		if err != nil {
+			return fmt.Errorf("Error adjusting super cluster: %s", err.Error())
+		}
+
+		dist := overallClusterDist(centroids, clonedPoints)
+
+		if dist < k.minClusterDist {
+			log.Printf("Encounetered a better cluster with dist %f", dist)
+
+			k.minClusterDist = dist
+			k.copyPoints(clonedPoints)
+		}
 	}
 
 	return nil
@@ -55,11 +68,11 @@ func (k *kMeansSuperCluster) clonePoints() []*FuzzyPoint {
 	return clonedPoints
 }
 
-func (k *kMeansSuperCluster) clusterize(points []*FuzzyPoint) error {
+func (k *kMeansSuperCluster) clusterize(points []*FuzzyPoint) ([]*FuzzyPoint, error) {
 	centroids, err := k.initialCentroids(points)
 
 	if err != nil {
-		return fmt.Errorf("Error building cluster: %s", err.Error())
+		return nil, fmt.Errorf("Error building cluster: %s", err.Error())
 	}
 
 	clusterSizes := []int{}
@@ -75,11 +88,11 @@ func (k *kMeansSuperCluster) clusterize(points []*FuzzyPoint) error {
 		madeAdjustments = k.adjustClusters(points, centroids, clusterSizes)
 
 		if err := k.adjustCentroids(points, centroids, clusterSizes); err != nil {
-			return fmt.Errorf("Eror building cluster: %s", err.Error())
+			return nil, fmt.Errorf("Eror building cluster: %s", err.Error())
 		}
 	}
 
-	return nil
+	return centroids, nil
 }
 
 func (k *kMeansSuperCluster) initialCentroids(points []*FuzzyPoint) ([]*FuzzyPoint, error) {
@@ -100,6 +113,8 @@ func (k *kMeansSuperCluster) initialCentroids(points []*FuzzyPoint) ([]*FuzzyPoi
 		}
 
 		centroid := points[index].Clone()
+		centroid.BestFitClusterIdx = i
+
 		centroids = append(centroids, centroid)
 
 		probSum = 0.0
@@ -199,6 +214,34 @@ func (k *kMeansSuperCluster) dimCount() (int, error) {
 	}
 	point := k.points[0]
 	return point.DimCount(), nil
+}
+
+func (k *kMeansSuperCluster) copyPoints(otherPoints []*FuzzyPoint) {
+	for i, point := range k.points {
+		point.copy(otherPoints[i])
+	}
+}
+
+func overallClusterDist(centroids, points []*FuzzyPoint) float64 {
+	overallDist := 0.0
+
+	for _, centroid := range centroids {
+		overallDist += clusterDist(centroid, points)
+	}
+
+	return overallDist
+}
+
+func clusterDist(centroid *FuzzyPoint, points []*FuzzyPoint) float64 {
+	dist := 0.0
+
+	for _, point := range points {
+		if point.BestFitClusterIdx == centroid.BestFitClusterIdx {
+			dist += point.Dist(centroid)
+		}
+	}
+
+	return dist
 }
 
 func bestFitCluster(centroids []*FuzzyPoint, point *FuzzyPoint) (int, float64) {

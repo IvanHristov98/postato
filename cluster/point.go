@@ -17,24 +17,24 @@ func NewFuzzyPoint(coords []float64) *FuzzyPoint {
 	}
 }
 
-func (p *FuzzyPoint) Clone() *FuzzyPoint {
-	cloneMembershipDegrees := make(map[int]float64, len(p.membershipDegrees))
+func (f *FuzzyPoint) Clone() *FuzzyPoint {
+	cloneMembershipDegrees := make(map[int]float64, len(f.membershipDegrees))
 
-	for k, v := range p.membershipDegrees {
+	for k, v := range f.membershipDegrees {
 		cloneMembershipDegrees[k] = v
 	}
 
 	return &FuzzyPoint{
-		BestFitClusterIdx: p.BestFitClusterIdx,
-		Coords:            p.Coords,
+		BestFitClusterIdx: f.BestFitClusterIdx,
+		Coords:            f.Coords,
 		membershipDegrees: cloneMembershipDegrees,
 	}
 }
 
-func (p *FuzzyPoint) Dist(other *FuzzyPoint) float64 {
+func (f *FuzzyPoint) Dist(other *FuzzyPoint) float64 {
 	dist := 0.0
 
-	for dim, coord := range p.Coords {
+	for dim, coord := range f.Coords {
 		otherCoord := other.Coords[dim]
 
 		dist += math.Pow(coord-otherCoord, 2)
@@ -43,10 +43,19 @@ func (p *FuzzyPoint) Dist(other *FuzzyPoint) float64 {
 	return math.Sqrt(dist)
 }
 
-func (p *FuzzyPoint) DimCount() int {
-	return len(p.Coords)
+func (f *FuzzyPoint) DimCount() int {
+	return len(f.Coords)
 }
 
-func (p *FuzzyPoint) hasBestFitCluster() bool {
-	return p.BestFitClusterIdx != NoClusterFit
+func (f *FuzzyPoint) hasBestFitCluster() bool {
+	return f.BestFitClusterIdx != NoClusterFit
+}
+
+func (f *FuzzyPoint) copy(other *FuzzyPoint) {
+	f.BestFitClusterIdx = other.BestFitClusterIdx
+	f.Coords = other.Coords
+
+	for i := 0; i < len(f.membershipDegrees); i++ {
+		f.membershipDegrees[i] = other.membershipDegrees[i]
+	}
 }
