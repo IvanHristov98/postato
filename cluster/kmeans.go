@@ -61,6 +61,46 @@ func (k *kMeansSuperCluster) BestFitCluster() *Cluster {
 	return &Cluster{}
 }
 
+func (k *kMeansSuperCluster) SilhouetteCoeff() float64 {
+	if k.clusterCount == 1 {
+		return 0.0
+	}
+
+	cumSilhouetteCoeff := 0.0
+
+	for _, point := range k.points {
+		intraCumDist := 0.0
+		neighbourCumDist := 0.0
+		intraCnt := 0
+		neighbourCnt := 0
+
+		nearestNeighbour := point.nearestClusterIdx()
+
+		for _, otherPoint := range k.points {
+			if point == otherPoint {
+				continue
+			}
+
+			if otherPoint.BestFitClusterIdx == point.BestFitClusterIdx {
+				dist := point.Dist(otherPoint)
+				intraCumDist += dist
+				intraCnt++
+			} else if otherPoint.BestFitClusterIdx == nearestNeighbour {
+				dist := point.Dist(otherPoint)
+				neighbourCumDist += dist
+				neighbourCnt++
+			}
+		}
+
+		intraDistMean := intraCumDist / float64(intraCnt)
+		neighbourDistMean := neighbourCumDist / float64(neighbourCnt)
+
+		cumSilhouetteCoeff += (neighbourDistMean - intraDistMean) / math.Max(neighbourDistMean, intraDistMean)
+	}
+
+	return cumSilhouetteCoeff / float64(len(k.points))
+}
+
 func (k *kMeansSuperCluster) clonePoints() []*FuzzyPoint {
 	clonedPoints := []*FuzzyPoint{}
 

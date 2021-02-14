@@ -2,6 +2,8 @@ package cluster
 
 import "math"
 
+const NoCluster = -1
+
 type FuzzyPoint struct {
 	BestFitClusterIdx int
 	Coords            []float64
@@ -11,7 +13,7 @@ type FuzzyPoint struct {
 
 func NewFuzzyPoint(coords []float64) *FuzzyPoint {
 	return &FuzzyPoint{
-		BestFitClusterIdx: NoClusterFit,
+		BestFitClusterIdx: NoCluster,
 		Coords:            coords,
 		membershipDegrees: make(map[int]float64),
 	}
@@ -71,7 +73,7 @@ func (f *FuzzyPoint) setMembershipDegree(centroids []*FuzzyPoint) {
 }
 
 func (f *FuzzyPoint) hasBestFitCluster() bool {
-	return f.BestFitClusterIdx != NoClusterFit
+	return f.BestFitClusterIdx != NoCluster
 }
 
 func (f *FuzzyPoint) copy(other *FuzzyPoint) {
@@ -81,4 +83,22 @@ func (f *FuzzyPoint) copy(other *FuzzyPoint) {
 	for i := 0; i < len(f.membershipDegrees); i++ {
 		f.membershipDegrees[i] = other.membershipDegrees[i]
 	}
+}
+
+func (f *FuzzyPoint) nearestClusterIdx() int {
+	nearestClr := NoCluster
+	maxMembershipDegree := 0.0
+
+	for clusterIdx, membershipDegree := range f.membershipDegrees {
+		if clusterIdx == f.BestFitClusterIdx {
+			continue
+		}
+
+		if maxMembershipDegree < membershipDegree {
+			nearestClr = clusterIdx
+			maxMembershipDegree = membershipDegree
+		}
+	}
+
+	return nearestClr
 }

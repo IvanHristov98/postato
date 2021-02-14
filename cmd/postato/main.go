@@ -22,9 +22,13 @@ func main() {
 	}
 
 	// Some of the positions could have multiple clusters.
-	clusterCnt := 2
+	clusterCnt := 6
 	c := clr.NewKMeansSuperCluster(points, clusterCnt)
 	c.Adjust(10)
+
+	s := c.SilhouetteCoeff()
+
+	fmt.Printf("%f", s)
 }
 
 type config struct {
