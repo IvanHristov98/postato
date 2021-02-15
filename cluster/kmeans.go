@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 )
@@ -39,7 +38,7 @@ func (k *kMeansSuperCluster) Adjust(iterCount uint) error {
 		dist := overallClusterDist(centroids, clonedPoints)
 
 		if dist < k.minClusterDist {
-			log.Printf("Encounetered a better cluster with dist %f", dist)
+			//log.Printf("Encounetered a better cluster with dist %f", dist)
 
 			k.minClusterDist = dist
 			k.copyPoints(clonedPoints)

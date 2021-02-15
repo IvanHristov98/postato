@@ -3,6 +3,10 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
 	"log"
 	"os"
 	"strconv"
@@ -21,14 +25,27 @@ func main() {
 		log.Fatalf("Error reading points: %s", err)
 	}
 
-	// Some of the positions could have multiple clusters.
-	clusterCnt := 6
-	c := clr.NewKMeansSuperCluster(points, clusterCnt)
-	c.Adjust(10)
+	c := clr.NewKMeansSuperCluster(points, 3)
+	c.Adjust(4)
+	cnt := 0
+	counts := map[string]int{"sitting": 0.0, "lying": 0.0, "standing": 0.0}
 
-	s := c.SilhouetteCoeff()
+	for _, point := range points {
+		if point.BestFitClusterIdx != 2 {
+			continue
+		}
 
-	fmt.Printf("%f", s)
+		cnt++
+		counts[point.Activity]++
+	}
+
+	for key, val := range counts {
+		fmt.Printf("%s: %v, ", key, float64(val)/float64(cnt))
+	}
+
+	fmt.Println("Size", cnt)
+
+	drawMembershipDegrees(points)
 }
 
 type config struct {
@@ -70,11 +87,22 @@ func parsePoints(path string) ([]*clr.FuzzyPoint, error) {
 			coords = append(coords, coord)
 		}
 
-		point := clr.NewFuzzyPoint(coords)
+		activity := record[len(record)-1]
+
+		if isNum(activity) {
+			activity = ""
+		}
+
+		point := clr.NewFuzzyPoint(coords, activity)
 		points = append(points, point)
 	}
 
 	return points, nil
+}
+
+func isNum(val string) bool {
+	_, err := strconv.Atoi(val)
+	return err == nil
 }
 
 func readCSVFile(path string) ([][]string, error) {
@@ -91,4 +119,23 @@ func readCSVFile(path string) ([][]string, error) {
 	}
 
 	return records, nil
+}
+
+func drawMembershipDegrees(points []*clr.FuzzyPoint) {
+	md := "md.png"
+	img := image.NewRGBA(image.Rect(0, 0, 256, 256))
+	green := color.RGBA{255, 255, 255, 255}
+	draw.Draw(img, img.Bounds(), &image.Uniform{green}, image.ZP, draw.Src)
+
+	rect := image.Rect(127, 127, 128, 128)
+	red := color.RGBA{255, 0, 0, 255}
+
+	draw.Draw(img, rect, &image.Uniform{red}, image.ZP, draw.Src)
+
+	file, err := os.Create(md)
+	if err != nil {
+		panic(err)
+	}
+
+	png.Encode(file, img)
 }

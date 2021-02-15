@@ -7,14 +7,16 @@ const NoCluster = -1
 type FuzzyPoint struct {
 	BestFitClusterIdx int
 	Coords            []float64
+	Activity          string
 	// Don't need to know how many clusters there are.
 	membershipDegrees map[int]float64
 }
 
-func NewFuzzyPoint(coords []float64) *FuzzyPoint {
+func NewFuzzyPoint(coords []float64, activity string) *FuzzyPoint {
 	return &FuzzyPoint{
 		BestFitClusterIdx: NoCluster,
 		Coords:            coords,
+		Activity:          activity,
 		membershipDegrees: make(map[int]float64),
 	}
 }
@@ -29,6 +31,7 @@ func (f *FuzzyPoint) Clone() *FuzzyPoint {
 	return &FuzzyPoint{
 		BestFitClusterIdx: f.BestFitClusterIdx,
 		Coords:            f.Coords,
+		Activity:          f.Activity,
 		membershipDegrees: cloneMembershipDegrees,
 	}
 }
@@ -79,6 +82,7 @@ func (f *FuzzyPoint) hasBestFitCluster() bool {
 func (f *FuzzyPoint) copy(other *FuzzyPoint) {
 	f.BestFitClusterIdx = other.BestFitClusterIdx
 	f.Coords = other.Coords
+	f.Activity = other.Activity
 
 	for i := 0; i < len(f.membershipDegrees); i++ {
 		f.membershipDegrees[i] = other.membershipDegrees[i]
