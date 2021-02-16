@@ -15,6 +15,7 @@ import (
 
 const (
 	FeatureCount = 6
+	GridBound    = 2
 	GenDir       = "GENDIR"
 	ImageDirName = "image"
 )
@@ -27,7 +28,7 @@ func main() {
 		log.Fatalf("Error reading points: %s", err)
 	}
 
-	fnLists, err := fn.SuperClusterToGFNLists(points)
+	fuzzyRuleSet, err := fn.SuperClusterToGFNRules(points)
 
 	if err != nil {
 		log.Fatalf("Error building fuzzy numbers from clusters: %s", err)
@@ -35,7 +36,7 @@ func main() {
 
 	cleanUpImages()
 
-	if err := drawAllImages(fnLists); err != nil {
+	if err := drawAllImages(fuzzyRuleSet); err != nil {
 		log.Fatalf("Error drawing fuzzy numbers: %s", err)
 	}
 
@@ -115,17 +116,17 @@ func readCSVFile(path string) ([][]string, error) {
 	return records, nil
 }
 
-func drawAllImages(fnLists map[int][]fn.FuzzyNum) error {
-	for clusterIdx, fuzzyNums := range fnLists {
+func drawAllImages(fuzzyRuleSet fn.FuzzyRuleSet) error {
+	for activity, fuzzyNums := range fuzzyRuleSet {
 		for fnIdx, fuzzyNum := range fuzzyNums {
-			imageName := fmt.Sprintf("fn_%d_%d.png", clusterIdx, fnIdx)
+			imageName := fmt.Sprintf("fn_%s_%d.png", activity, fnIdx)
 			path, err := imagePath(imageName)
 			if err != nil {
 				return err
 			}
 
-			if err := plot.DrawFuzzyNums(fuzzyNum, -2, 2, path); err != nil {
-				return fmt.Errorf("Error drawing fuzzy number %d in cluster %d: %s", fnIdx, clusterIdx, err)
+			if err := plot.DrawFuzzyNums(fuzzyNum, -GridBound, GridBound, fnIdx, activity, path); err != nil {
+				return fmt.Errorf("Error drawing fuzzy number %d in activity %s: %s", fnIdx, activity, err)
 			}
 		}
 	}

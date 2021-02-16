@@ -36,8 +36,8 @@ type dataPoint struct {
 	y float64
 }
 
-func DrawFuzzyNums(num fn.FuzzyNum, low, high float64, imagePath string) error {
-	dc, err := drawingCanvas(low, high)
+func DrawFuzzyNums(num fn.FuzzyNum, low, high float64, dim int, activity, imagePath string) error {
+	dc, err := drawingCanvas(low, high, dim, activity)
 	if err != nil {
 		return fmt.Errorf("Error initializing canvas: %s", err)
 	}
@@ -51,26 +51,25 @@ func DrawFuzzyNums(num fn.FuzzyNum, low, high float64, imagePath string) error {
 	return nil
 }
 
-func drawingCanvas(low, high float64) (*gg.Context, error) {
+func drawingCanvas(low, high float64, dim int, activity string) (*gg.Context, error) {
 	dc := gg.NewContext(ImgWidth, ImgHeight)
 
 	dc.SetRGBA(1, 1, 1, 1)
 	dc.Clear()
 
+	if err := loadFont(dc); err != nil {
+		return nil, fmt.Errorf("Error loading font: %s", err)
+	}
+
+	drawTitle(dc, dim, activity)
 	drawGrid(dc, low, high)
 
 	return dc, nil
 }
 
-func drawGrid(dc *gg.Context, low, high float64) error {
-	if err := loadFont(dc); err != nil {
-		return fmt.Errorf("Error loading font: %s", err)
-	}
-
+func drawGrid(dc *gg.Context, low, high float64) {
 	drawGridBounds(dc)
 	drawHorizontalSubgrid(dc, low, high)
-
-	return nil
 }
 
 func drawGridBounds(dc *gg.Context) {
@@ -189,4 +188,11 @@ func drawLine(dc *gg.Context, width, x1, y1, x2, y2 float64) {
 	dc.Stroke()
 
 	dc.Fill()
+}
+
+func drawTitle(dc *gg.Context, dim int, activity string) {
+	dc.SetRGBA(0, 0, 0, 1)
+
+	title := fmt.Sprintf("Dimension %d for activity %s", dim, activity)
+	dc.DrawStringAnchored(title, float64(ImgWidth)/2, VOffset/2, 0.5, 0.5)
 }

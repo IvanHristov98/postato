@@ -17,8 +17,8 @@ type gaussianFuzzyNum struct {
 	stdDev float64
 }
 
-func SuperClusterToGFNLists(points []*cluster.FuzzyPoint) (map[int][]FuzzyNum, error) {
-	gfnLists := make(map[int][]FuzzyNum)
+func SuperClusterToGFNRules(points []*cluster.FuzzyPoint) (FuzzyRuleSet, error) {
+	gfnLists := make(FuzzyRuleSet)
 
 	superCluster := cluster.NewKMeansSuperCluster(points, OptimalClusterCount)
 	superCluster.Adjust(ClusteringRestartCount)
@@ -42,7 +42,7 @@ func SuperClusterToGFNLists(points []*cluster.FuzzyPoint) (map[int][]FuzzyNum, e
 			gfnList = append(gfnList, gfn)
 		}
 
-		gfnLists[centroid.BestFitClusterIdx] = gfnList
+		gfnLists[centroid.Activity] = gfnList
 	}
 
 	return gfnLists, nil
