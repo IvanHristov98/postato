@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	clr "github.com/IvanHristov98/postato/cluster"
+	"github.com/IvanHristov98/postato/fuzzy/inference"
 	fn "github.com/IvanHristov98/postato/fuzzy/number"
 	"github.com/IvanHristov98/postato/plot"
 	"github.com/akamensky/argparse"
@@ -39,6 +40,12 @@ func main() {
 	if err := drawAllImages(fuzzyRuleSet); err != nil {
 		log.Fatalf("Error drawing fuzzy numbers: %s", err)
 	}
+
+	inferer := inference.NewMamdaniInferer(fuzzyRuleSet)
+
+	activity := inferer.ClassifyActivity(points[1])
+
+	fmt.Println("Acitivity should be ", activity)
 
 	log.Println("Finished")
 }

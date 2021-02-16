@@ -17,7 +17,9 @@ type FuzzyNum interface {
 	String() string
 }
 
-type FuzzyRuleSet map[string][]FuzzyNum
+type FuzzyRule []FuzzyNum
+
+type FuzzyRuleSet map[string]FuzzyRule
 
 func clusterBounds(points []*cluster.FuzzyPoint, centroid *cluster.FuzzyPoint, dim int) (float64, float64) {
 	cumMin := 0.0
