@@ -52,6 +52,8 @@ func (k *kMeansSuperCluster) Adjust(iterCount uint) error {
 			for _, point := range k.clusteredPoints {
 				point.setMembershipDegree(centroids)
 			}
+
+			k.alignCentroidActivities()
 		}
 	}
 
@@ -66,6 +68,7 @@ func (k *kMeansSuperCluster) Centroids() []*FuzzyPoint {
 	return k.centroids
 }
 
+// TODO: Remove dead code.
 func (k *kMeansSuperCluster) SilhouetteCoeff() float64 {
 	if k.clusterCount == 1 {
 		return 0.0
@@ -104,6 +107,15 @@ func (k *kMeansSuperCluster) SilhouetteCoeff() float64 {
 	}
 
 	return cumSilhouetteCoeff / float64(len(k.points))
+}
+
+func (k *kMeansSuperCluster) DimCount() (int, error) {
+	if len(k.points) == 0 {
+		return 0, fmt.Errorf("No points to clusterize")
+	}
+
+	point := k.points[0]
+	return point.DimCount(), nil
 }
 
 func (k *kMeansSuperCluster) clonePoints() []*FuzzyPoint {
@@ -253,17 +265,40 @@ func (k *kMeansSuperCluster) clusterCenter(points []*FuzzyPoint, clusterIdx int)
 	return overallCoords, nil
 }
 
-func (k *kMeansSuperCluster) DimCount() (int, error) {
-	if len(k.points) == 0 {
-		return 0, fmt.Errorf("No points to clusterize")
-	}
-	point := k.points[0]
-	return point.DimCount(), nil
-}
-
 func (k *kMeansSuperCluster) copyPoints(otherPoints []*FuzzyPoint) {
 	for i, point := range k.points {
 		point.copy(otherPoints[i])
+	}
+}
+
+func (k *kMeansSuperCluster) alignCentroidActivities() {
+	for _, centroid := range k.centroids {
+		k.alignCentroidActivity(centroid)
+	}
+}
+
+func (k *kMeansSuperCluster) alignCentroidActivity(centroid *FuzzyPoint) {
+	activityCounts := make(map[string]int)
+
+	for _, point := range k.clusteredPoints {
+		if point.BestFitClusterIdx != centroid.BestFitClusterIdx {
+			continue
+		}
+
+		if _, ok := activityCounts[point.Activity]; !ok {
+			activityCounts[point.Activity] = 1
+		} else {
+			activityCounts[point.Activity]++
+		}
+	}
+
+	maxCnt := 0
+
+	for activity, cnt := range activityCounts {
+		if cnt > maxCnt {
+			maxCnt = cnt
+			centroid.Activity = activity
+		}
 	}
 }
 
