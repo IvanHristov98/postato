@@ -3,20 +3,21 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
-	"image"
-	"image/color"
-	"image/draw"
-	"image/png"
 	"log"
 	"os"
 	"strconv"
 
 	clr "github.com/IvanHristov98/postato/cluster"
 	fn "github.com/IvanHristov98/postato/fuzzy/number"
+	"github.com/IvanHristov98/postato/plot"
 	"github.com/akamensky/argparse"
 )
 
-const FeatureCount = 6
+const (
+	FeatureCount = 6
+	GenDir       = "GENDIR"
+	ImageDirName = "image"
+)
 
 func main() {
 	cfg := parseConfig()
@@ -32,12 +33,13 @@ func main() {
 		log.Fatalf("Error building fuzzy numbers from clusters: %s", err)
 	}
 
-	for i, fnList := range fnLists {
-		fmt.Printf("Cluster %d\n", i)
-		for _, fn := range fnList {
-			fmt.Println(fn)
-		}
+	cleanUpImages()
+
+	if err := drawAllImages(fnLists); err != nil {
+		log.Fatalf("Error drawing fuzzy numbers: %s", err)
 	}
+
+	log.Println("Finished")
 }
 
 type config struct {
@@ -113,21 +115,53 @@ func readCSVFile(path string) ([][]string, error) {
 	return records, nil
 }
 
-func drawMembershipDegrees(points []*clr.FuzzyPoint) {
-	md := "md.png"
-	img := image.NewRGBA(image.Rect(0, 0, 256, 256))
-	green := color.RGBA{255, 255, 255, 255}
-	draw.Draw(img, img.Bounds(), &image.Uniform{green}, image.ZP, draw.Src)
+func drawAllImages(fnLists map[int][]fn.FuzzyNum) error {
+	for clusterIdx, fuzzyNums := range fnLists {
+		for fnIdx, fuzzyNum := range fuzzyNums {
+			imageName := fmt.Sprintf("fn_%d_%d.png", clusterIdx, fnIdx)
+			path, err := imagePath(imageName)
+			if err != nil {
+				return err
+			}
 
-	rect := image.Rect(127, 127, 128, 128)
-	red := color.RGBA{255, 0, 0, 255}
-
-	draw.Draw(img, rect, &image.Uniform{red}, image.ZP, draw.Src)
-
-	file, err := os.Create(md)
-	if err != nil {
-		panic(err)
+			if err := plot.DrawFuzzyNums(fuzzyNum, -2, 2, path); err != nil {
+				return fmt.Errorf("Error drawing fuzzy number %d in cluster %d: %s", fnIdx, clusterIdx, err)
+			}
+		}
 	}
 
-	png.Encode(file, img)
+	return nil
+}
+
+func cleanUpImages() error {
+	dir, err := imageDir()
+
+	if err != nil {
+		return fmt.Errorf("Error cleaning up images: %s", err)
+	}
+
+	os.RemoveAll(dir)
+
+	return nil
+}
+
+func imagePath(name string) (string, error) {
+	dir, err := imageDir()
+
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s%s%s", dir, string(os.PathSeparator), name), nil
+}
+
+func imageDir() (string, error) {
+	dataDir := os.Getenv(GenDir)
+	imageDir := fmt.Sprintf("%s%s%s", dataDir, string(os.PathSeparator), ImageDirName)
+
+	if err := os.MkdirAll(imageDir, 0700); err != nil {
+		return "", fmt.Errorf("Error creating img dir: %s", err)
+	}
+
+	return imageDir, nil
 }
