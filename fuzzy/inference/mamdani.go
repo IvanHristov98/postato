@@ -1,8 +1,6 @@
 package inference
 
 import (
-	"fmt"
-
 	"github.com/IvanHristov98/postato/cluster"
 	"github.com/IvanHristov98/postato/fuzzy/number"
 )
@@ -28,7 +26,6 @@ func (m *mamdaniInferer) ClassifyActivity(point *cluster.FuzzyPoint) string {
 
 	for activity := range m.ruleSet {
 		membershipDegree := m.activityMembershipDegree(point, activity)
-		fmt.Println(membershipDegree)
 
 		if maxMembershipDegree < membershipDegree {
 			maxMembershipDegree = membershipDegree

@@ -4,8 +4,10 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
+	"time"
 
 	clr "github.com/IvanHristov98/postato/cluster"
 	"github.com/IvanHristov98/postato/fuzzy/inference"
@@ -15,15 +17,41 @@ import (
 )
 
 const (
-	FeatureCount = 6
-	GridBound    = 2
-	GenDir       = "GENDIR"
-	ImageDirName = "image"
+	FeatureCount   = 6
+	GridBound      = 2
+	GenDir         = "GENDIR"
+	ImageDirName   = "image"
+	FoldCrossCount = 10
 )
 
-func main() {
-	cfg := parseConfig()
+type config struct {
+	dataset string
+}
 
+func main() {
+	rand.Seed(time.Now().UnixNano())
+
+	parser := argparse.NewParser("postato", "Guesses human body position")
+
+	d := parser.String("d", "dataset", &argparse.Options{Required: true, Help: "Path to training dataset. Must be a CSV."})
+
+	drawCmd := parser.NewCommand("draw", "Draws fuzzy numbers.")
+	testCmd := parser.NewCommand("test", "Runs a fold cross validation of the fuzzy inference system.")
+
+	if err := parser.Parse(os.Args); err != nil {
+		log.Fatalf("Error parsing arguments: %s", err)
+	}
+
+	cfg := &config{dataset: *d}
+
+	if drawCmd.Happened() {
+		drawFuzzyNumbers(cfg)
+	} else if testCmd.Happened() {
+		crossFold(cfg)
+	}
+}
+
+func drawFuzzyNumbers(cfg *config) {
 	points, err := parsePoints(cfg.dataset)
 	if err != nil {
 		log.Fatalf("Error reading points: %s", err)
@@ -41,31 +69,49 @@ func main() {
 		log.Fatalf("Error drawing fuzzy numbers: %s", err)
 	}
 
-	inferer := inference.NewMamdaniInferer(fuzzyRuleSet)
-
-	activity := inferer.ClassifyActivity(points[1])
-
-	fmt.Println("Acitivity should be ", activity)
-
-	log.Println("Finished")
+	log.Println("Fuzzy number drawing completed.")
 }
 
-type config struct {
-	dataset string
-}
-
-func parseConfig() *config {
-	parser := argparse.NewParser("postato", "Guesses human body position")
-
-	d := parser.String("d", "dataset", &argparse.Options{Required: true, Help: "Path to training dataset. Must be a CSV."})
-
-	if err := parser.Parse(os.Args); err != nil {
-		log.Fatalf("Error parsing arguments: %s", err)
+func crossFold(cfg *config) {
+	points, err := parsePoints(cfg.dataset)
+	if err != nil {
+		log.Fatalf("Error reading points: %s", err)
 	}
 
-	return &config{
-		dataset: *d,
+	rand.Shuffle(len(points), func(i, j int) { points[i], points[j] = points[j], points[i] })
+	cumAccuracy := 0.0
+
+	for i := 0; i < FoldCrossCount; i++ {
+		trainingPoints := append(points[:int(len(points)*i/FoldCrossCount)], points[int(len(points)*(i+1)/FoldCrossCount):]...)
+
+		fuzzyRuleSet, err := fn.SuperClusterToGFNRules(trainingPoints)
+
+		if err != nil {
+			log.Fatalf("Error building fuzzy numbers from clusters: %s", err)
+		}
+
+		inferer := inference.NewMamdaniInferer(fuzzyRuleSet)
+
+		testPoints := points[int(len(points)*i/10):int(len(points)*(i+1)/FoldCrossCount)]
+
+		successCnt := 0
+
+		for _, testPoint := range testPoints {
+			activity := inferer.ClassifyActivity(testPoint)
+
+			if testPoint.Activity == activity {
+				successCnt++
+			}
+		}
+
+		accuracy := 100.0 * float64(successCnt) / float64(len(testPoints))
+		log.Printf("Accuracy of fold cross %d iteration is %2.f perc.\n", i, accuracy)
+
+		cumAccuracy += accuracy
 	}
+
+	avgAccuracy := cumAccuracy / float64(FoldCrossCount)
+	log.Printf("Average accuracy of %d fold cross is %2.f perc.\n", FoldCrossCount, avgAccuracy)
 }
 
 func parsePoints(path string) ([]*clr.FuzzyPoint, error) {
