@@ -2,6 +2,7 @@ package number
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/IvanHristov98/postato/cluster"
 )
@@ -87,7 +88,9 @@ func newGaussianFuzzyNum(mean float64, stdDev float64) FuzzyNum {
 }
 
 func (gfn *gaussianFuzzyNum) MembershipDegree(x float64) float64 {
-	return 0.0
+	numer := -math.Pow(x-gfn.mean, 2)
+	denom := 2 * math.Pow(gfn.stdDev, 2)
+	return math.Exp(numer / denom)
 }
 
 func (gfn *gaussianFuzzyNum) String() string {
