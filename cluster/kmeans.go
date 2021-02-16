@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 )
@@ -12,16 +13,20 @@ const (
 )
 
 type kMeansSuperCluster struct {
-	points         []*FuzzyPoint
-	clusterCount   int
-	minClusterDist float64
+	points          []*FuzzyPoint
+	clusteredPoints []*FuzzyPoint
+	centroids       []*FuzzyPoint
+	clusterCount    int
+	minClusterDist  float64
 }
 
 func NewKMeansSuperCluster(points []*FuzzyPoint, clusterCount int) FuzzySuperCluster {
 	return &kMeansSuperCluster{
-		points:         points,
-		clusterCount:   clusterCount,
-		minClusterDist: math.Inf(0),
+		points:          points,
+		clusteredPoints: []*FuzzyPoint{},
+		centroids:       []*FuzzyPoint{},
+		clusterCount:    clusterCount,
+		minClusterDist:  math.Inf(0),
 	}
 }
 
@@ -38,18 +43,27 @@ func (k *kMeansSuperCluster) Adjust(iterCount uint) error {
 		dist := overallClusterDist(centroids, clonedPoints)
 
 		if dist < k.minClusterDist {
-			//log.Printf("Encounetered a better cluster with dist %f", dist)
+			log.Printf("Encounetered a better cluster with overall intra dist %f", dist)
 
 			k.minClusterDist = dist
-			k.copyPoints(clonedPoints)
+			k.clusteredPoints = clonedPoints
+			k.centroids = centroids
 
-			for _, points := range k.points {
-				points.setMembershipDegree(centroids)
+			for _, point := range k.clusteredPoints {
+				point.setMembershipDegree(centroids)
 			}
 		}
 	}
 
 	return nil
+}
+
+func (k *kMeansSuperCluster) ClusteredPoints() []*FuzzyPoint {
+	return k.clusteredPoints
+}
+
+func (k *kMeansSuperCluster) Centroids() []*FuzzyPoint {
+	return k.centroids
 }
 
 func (k *kMeansSuperCluster) Clusters() []*Cluster {
@@ -211,7 +225,7 @@ func (k *kMeansSuperCluster) adjustCentroids(points, centroids []*FuzzyPoint, cl
 }
 
 func (k *kMeansSuperCluster) clusterCenter(points []*FuzzyPoint, clusterIdx int) ([]float64, error) {
-	dimCount, err := k.dimCount()
+	dimCount, err := k.DimCount()
 	if err != nil {
 		return nil, fmt.Errorf("Error finding cluster center: %s", err.Error())
 	}
@@ -247,7 +261,7 @@ func (k *kMeansSuperCluster) clusterCenter(points []*FuzzyPoint, clusterIdx int)
 	return overallCoords, nil
 }
 
-func (k *kMeansSuperCluster) dimCount() (int, error) {
+func (k *kMeansSuperCluster) DimCount() (int, error) {
 	if len(k.points) == 0 {
 		return 0, fmt.Errorf("No points to clusterize")
 	}

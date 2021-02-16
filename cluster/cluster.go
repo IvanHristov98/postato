@@ -5,6 +5,9 @@ type FuzzySuperCluster interface {
 	Clusters() []*Cluster
 	BestFitCluster() *Cluster
 	SilhouetteCoeff() float64
+	ClusteredPoints() []*FuzzyPoint
+	Centroids() []*FuzzyPoint
+	DimCount() (int, error)
 }
 
 type Cluster struct {

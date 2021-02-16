@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	clr "github.com/IvanHristov98/postato/cluster"
+	fn "github.com/IvanHristov98/postato/fuzzy/number"
 	"github.com/akamensky/argparse"
 )
 
@@ -25,27 +26,18 @@ func main() {
 		log.Fatalf("Error reading points: %s", err)
 	}
 
-	c := clr.NewKMeansSuperCluster(points, 3)
-	c.Adjust(4)
-	cnt := 0
-	counts := map[string]int{"sitting": 0.0, "lying": 0.0, "standing": 0.0}
+	fnLists, err := fn.SuperClusterToGFNLists(points)
 
-	for _, point := range points {
-		if point.BestFitClusterIdx != 2 {
-			continue
+	if err != nil {
+		log.Fatalf("Error building fuzzy numbers from clusters: %s", err)
+	}
+
+	for i, fnList := range fnLists {
+		fmt.Printf("Cluster %d\n", i)
+		for _, fn := range fnList {
+			fmt.Println(fn)
 		}
-
-		cnt++
-		counts[point.Activity]++
 	}
-
-	for key, val := range counts {
-		fmt.Printf("%s: %v, ", key, float64(val)/float64(cnt))
-	}
-
-	fmt.Println("Size", cnt)
-
-	drawMembershipDegrees(points)
 }
 
 type config struct {
