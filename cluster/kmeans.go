@@ -66,14 +66,6 @@ func (k *kMeansSuperCluster) Centroids() []*FuzzyPoint {
 	return k.centroids
 }
 
-func (k *kMeansSuperCluster) Clusters() []*Cluster {
-	return nil
-}
-
-func (k *kMeansSuperCluster) BestFitCluster() *Cluster {
-	return &Cluster{}
-}
-
 func (k *kMeansSuperCluster) SilhouetteCoeff() float64 {
 	if k.clusterCount == 1 {
 		return 0.0
