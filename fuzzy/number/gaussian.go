@@ -7,45 +7,23 @@ import (
 	"github.com/IvanHristov98/postato/cluster"
 )
 
-const (
-	OptimalClusterCount    = 3
-	ClusteringRestartCount = 10
-)
-
 type gaussianFuzzyNum struct {
 	mean   float64
 	stdDev float64
 }
 
-func SuperClusterToGFNRules(points []*cluster.FuzzyPoint) (FuzzyRuleSet, error) {
-	gfnLists := make(FuzzyRuleSet)
+func GFNRuleSet(points []*cluster.FuzzyPoint) (FuzzyRuleSet, error) {
+	return fuzzyNumRuleSet(points, gfnFromCluster)
+}
 
-	superCluster := cluster.NewKMeansSuperCluster(points, OptimalClusterCount)
-	superCluster.Adjust(ClusteringRestartCount)
+func (gfn *gaussianFuzzyNum) MembershipDegree(x float64) float64 {
+	numer := -math.Pow(x-gfn.mean, 2)
+	denom := 2 * math.Pow(gfn.stdDev, 2)
+	return math.Exp(numer / denom)
+}
 
-	clusteredPoints := superCluster.ClusteredPoints()
-	centroids := superCluster.Centroids()
-	dimCount, err := superCluster.DimCount()
-	if err != nil {
-		return nil, fmt.Errorf("Error obtaining dimension count: %s", err)
-	}
-
-	for _, centroid := range centroids {
-		gfnList := []FuzzyNum{}
-
-		for dim := 0; dim < dimCount; dim++ {
-			gfn, err := gfnFromCluster(clusteredPoints, centroid, dim)
-			if err != nil {
-				return nil, fmt.Errorf("Error obtaining GFN for cluster %d on dim %d: %s", centroid.BestFitClusterIdx, dim, err)
-			}
-
-			gfnList = append(gfnList, gfn)
-		}
-
-		gfnLists[centroid.Activity] = gfnList
-	}
-
-	return gfnLists, nil
+func (gfn *gaussianFuzzyNum) String() string {
+	return fmt.Sprintf("mean: %f, std dev: %f", gfn.mean, gfn.stdDev)
 }
 
 func gfnFromCluster(points []*cluster.FuzzyPoint, centroid *cluster.FuzzyPoint, dim int) (FuzzyNum, error) {
@@ -64,35 +42,9 @@ func gfnFromCluster(points []*cluster.FuzzyPoint, centroid *cluster.FuzzyPoint, 
 	return newGaussianFuzzyNum(mean, stdDev), nil
 }
 
-func clusterCenter(leftBound float64, rightBound float64) (float64, error) {
-	if rightBound <= leftBound {
-		return 0.0, fmt.Errorf("Left bound greater than or equal to right bound")
-	}
-
-	return (rightBound + leftBound) / 2, nil
-}
-
-func clusterWidth(leftBound float64, rightBound float64) (float64, error) {
-	if rightBound <= leftBound {
-		return 0.0, fmt.Errorf("Left bound greater than or equal to right bound")
-	}
-
-	return rightBound - leftBound, nil
-}
-
 func newGaussianFuzzyNum(mean float64, stdDev float64) FuzzyNum {
 	return &gaussianFuzzyNum{
 		mean:   mean,
 		stdDev: stdDev,
 	}
-}
-
-func (gfn *gaussianFuzzyNum) MembershipDegree(x float64) float64 {
-	numer := -math.Pow(x-gfn.mean, 2)
-	denom := 2 * math.Pow(gfn.stdDev, 2)
-	return math.Exp(numer / denom)
-}
-
-func (gfn *gaussianFuzzyNum) String() string {
-	return fmt.Sprintf("mean: %f, std dev: %f", gfn.mean, gfn.stdDev)
 }

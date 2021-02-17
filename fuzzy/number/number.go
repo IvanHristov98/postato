@@ -8,8 +8,12 @@ import (
 
 const (
 	// TODO: Tweak values to improve accuracy.
-	MinMembershipDegree = 0.15
-	BoundWidth          = 0.02
+	MinViableMembershipDegree = 0.05
+	BoundWidth                = 0.02
+	OptimalClusterCount       = 3
+	ClusteringRestartCount    = 10
+	GaussianFuzzyNum          = "gaussian"
+	TriangularFuzzyNum        = "triangular"
 )
 
 type FuzzyNum interface {
@@ -20,6 +24,39 @@ type FuzzyNum interface {
 type FuzzyRule []FuzzyNum
 
 type FuzzyRuleSet map[string]FuzzyRule
+
+type superClusterToFNConverter func(points []*cluster.FuzzyPoint, centroid *cluster.FuzzyPoint, dim int) (FuzzyNum, error)
+
+func fuzzyNumRuleSet(points []*cluster.FuzzyPoint, converter superClusterToFNConverter) (FuzzyRuleSet, error) {
+	ruleSet := make(FuzzyRuleSet)
+
+	superCluster := cluster.NewKMeansSuperCluster(points, OptimalClusterCount)
+	superCluster.Adjust(ClusteringRestartCount)
+
+	clusteredPoints := superCluster.ClusteredPoints()
+	centroids := superCluster.Centroids()
+	dimCount, err := superCluster.DimCount()
+	if err != nil {
+		return nil, fmt.Errorf("Error obtaining dimension count: %s", err)
+	}
+
+	for _, centroid := range centroids {
+		rule := FuzzyRule{}
+
+		for dim := 0; dim < dimCount; dim++ {
+			gfn, err := converter(clusteredPoints, centroid, dim)
+			if err != nil {
+				return nil, fmt.Errorf("Error obtaining GFN for cluster %d on dim %d: %s", centroid.BestFitClusterIdx, dim, err)
+			}
+
+			rule = append(rule, gfn)
+		}
+
+		ruleSet[centroid.Activity] = rule
+	}
+
+	return ruleSet, nil
+}
 
 func clusterBounds(points []*cluster.FuzzyPoint, centroid *cluster.FuzzyPoint, dim int) (float64, float64) {
 	cumMin := 0.0
@@ -34,18 +71,18 @@ func clusterBounds(points []*cluster.FuzzyPoint, centroid *cluster.FuzzyPoint, d
 		membershipDegree := point.MembershipDegree(centroid.BestFitClusterIdx)
 		coord := point.Coords[dim]
 
-		if membershipDegree < MinMembershipDegree {
+		if membershipDegree < MinViableMembershipDegree {
 			continue
 		}
 
 		// Less than centroid center means min.
-		if membershipDegree+BoundWidth > MinMembershipDegree && coord < centroidCoord {
+		if membershipDegree+BoundWidth > MinViableMembershipDegree && coord < centroidCoord {
 			cumMin += point.Coords[dim]
 			minCnt++
 		}
 
 		// More than centroid center means max.
-		if membershipDegree+BoundWidth > MinMembershipDegree && coord > centroidCoord {
+		if membershipDegree+BoundWidth > MinViableMembershipDegree && coord > centroidCoord {
 			cumMax += point.Coords[dim]
 			maxCnt++
 		}
@@ -63,4 +100,20 @@ func clusterBounds(points []*cluster.FuzzyPoint, centroid *cluster.FuzzyPoint, d
 	max := cumMax / float64(maxCnt)
 
 	return min, max
+}
+
+func clusterCenter(leftBound float64, rightBound float64) (float64, error) {
+	if rightBound <= leftBound {
+		return 0.0, fmt.Errorf("Left bound greater than or equal to right bound")
+	}
+
+	return (rightBound + leftBound) / 2, nil
+}
+
+func clusterWidth(leftBound float64, rightBound float64) (float64, error) {
+	if rightBound <= leftBound {
+		return 0.0, fmt.Errorf("Left bound greater than or equal to right bound")
+	}
+
+	return rightBound - leftBound, nil
 }

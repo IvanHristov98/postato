@@ -11,6 +11,7 @@ import (
 
 	clr "github.com/IvanHristov98/postato/cluster"
 	"github.com/IvanHristov98/postato/fuzzy/inference"
+	"github.com/IvanHristov98/postato/fuzzy/number"
 	fn "github.com/IvanHristov98/postato/fuzzy/number"
 	"github.com/IvanHristov98/postato/plot"
 	"github.com/akamensky/argparse"
@@ -26,6 +27,7 @@ const (
 
 type config struct {
 	dataset string
+	fnType  string
 }
 
 func main() {
@@ -35,6 +37,9 @@ func main() {
 
 	d := parser.String("d", "dataset", &argparse.Options{Required: true, Help: "Path to training dataset. Must be a CSV."})
 
+	fuzzyNumTypes := []string{number.GaussianFuzzyNum, number.TriangularFuzzyNum}
+	t := parser.Selector("t", "type", fuzzyNumTypes, &argparse.Options{Required: false, Default: number.GaussianFuzzyNum})
+
 	drawCmd := parser.NewCommand("draw", "Draws fuzzy numbers.")
 	testCmd := parser.NewCommand("test", "Runs a fold cross validation of the fuzzy inference system.")
 
@@ -42,7 +47,7 @@ func main() {
 		log.Fatalf("Error parsing arguments: %s", err)
 	}
 
-	cfg := &config{dataset: *d}
+	cfg := &config{dataset: *d, fnType: *t}
 
 	if drawCmd.Happened() {
 		drawFuzzyNumbers(cfg)
@@ -57,7 +62,7 @@ func drawFuzzyNumbers(cfg *config) {
 		log.Fatalf("Error reading points: %s", err)
 	}
 
-	fuzzyRuleSet, err := fn.SuperClusterToGFNRules(points)
+	fuzzyRuleSet, err := fn.NewFuzzyRuleSet(cfg.fnType, points)
 
 	if err != nil {
 		log.Fatalf("Error building fuzzy numbers from clusters: %s", err)
@@ -84,7 +89,7 @@ func crossFold(cfg *config) {
 	for i := 0; i < FoldCrossCount; i++ {
 		trainingPoints := append(points[:int(len(points)*i/FoldCrossCount)], points[int(len(points)*(i+1)/FoldCrossCount):]...)
 
-		fuzzyRuleSet, err := fn.SuperClusterToGFNRules(trainingPoints)
+		fuzzyRuleSet, err := fn.NewFuzzyRuleSet(cfg.fnType, trainingPoints)
 
 		if err != nil {
 			log.Fatalf("Error building fuzzy numbers from clusters: %s", err)
