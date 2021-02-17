@@ -25,13 +25,13 @@ go get ./...
 source .envrc
 
 # For gaussian fuzzy numbers
-go run cmd/postato/main.go draw -d data/new.csv -t gaussian
+go run cmd/postato/main.go draw -d data/sample.csv -t gaussian
 
 # For triangular fuzzy numbers
-go run cmd/postato/main.go draw -d data/new.csv -t triangular
+go run cmd/postato/main.go draw -d data/sample.csv -t triangular
 ```
 
-All images are generated within the `gen/image` directory.
+All images are generated within the `gen/image` directory. There is an example dataset located at `data/sample.csv`.
 
 ## Accuracy
 
@@ -39,8 +39,8 @@ It is tested using 10-fold-cross validation which can be tested like executed li
 
 ```bash
 # For gaussian fuzzy numbers. Shows a success rate of ~82%.
-go run cmd/postato/main.go test -d data/new.csv -t gaussian
+go run cmd/postato/main.go test -d data/sample.csv -t gaussian
 
 # For triangular fuzzy numbers. Shows a success rate of ~12% which is far worse.
-go run cmd/postato/main.go test -d data/new.csv -t triangular
+go run cmd/postato/main.go test -d data/sample.csv -t triangular
 ```
